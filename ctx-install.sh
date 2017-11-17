@@ -77,5 +77,6 @@ sed "s/VendorName     \"NVIDIA Corporation\"/VendorName     \"NVIDIA Corporation
 echo "Upgrading System"
 yum -y update
 systemctl restart network
+echo "Postgresql initdb"
 echo "Citrix XenAPP VDA Install"
 /opt/Citrix/VDA/sbin/ctxinstall.sh
