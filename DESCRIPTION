@@ -1,2 +1,5 @@
-ctx-install.sh - Deploy Citrix VDA for CentOS
-AD-integration.sh - Domain Controler Integration for CentOS
+ctx-install.sh - Deploy Citrix VDA for CentOS.
+AD-integration.sh - Domain Controler Integration for CentOS.
+Azure_OSS_Autoscaling.sh - Deploy of Azure VM Scale Service with Azure CLI 2.0
+SambaAD-Integrtion.sh - Deploy of Samba with Active Directory Integration.
+user_authentication.sh - User ENV for HPC enviroment.
