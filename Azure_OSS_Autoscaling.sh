@@ -13,6 +13,8 @@ AZVMPass=$4
 AZDNSN=$5
 AZSKUAS="Standard_A1_v2"
 AZSKUJB="Standard_A1_v2"
+export AZVMPass=$4
+export SSHPASS=$AZVMPass
 
 echo "Creating Resource Group"
 az group create --location $AZZONE --name "$AZCSUFF"RGAUTOSC >> /dev/null
@@ -84,7 +86,24 @@ then
     echo "Base Image Created"
     echo "Access to $AZIPVMB IP with SSH with $AZVMUser through SSH with $AZVMPass"
 fi
-
+echo Como se ve:
+sleep 30
+env |grep SSHPASS
+env |grep AZVMPass
+echo "Please test your ssh login"
+ssh $AZVMUser@$AZIPVMB id
+echo "Configuring Webserver on $AZIPVMB"
+sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S apt-get -y install apache2 php5"
+sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S mkdir -p /var/www/html"
+sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S touch /var/www/html/index.php"
+sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "ls -lF /var/www/html/"
+sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '<?php echo gethostbyname(trim(\`hostname\`)); ?>' > ~/tmp.txt"
+sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '<h3> Version 1 </h3>' >> ~/tmp.txt"
+sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S mv /home/$AZVMUser/tmp.txt /var/www/html/index.php"
+sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S rm -f /var/www/html/index.h*"
+echo "Done"
+echo
+echo 
 echo "Please run the following commands on the VM that will be used for the VMSS"
 echo "1. Mount your file share in your WebServer's Document Root"
 echo "2. Declare your file share in /etc/fstab and set it up to WebServer's Document Root"
@@ -139,4 +158,4 @@ then
     echo "Jump Box Created"
     echo "JumpBox Access to $AZIPVMJB IP with SSH with $AZVMUser through SSH with $AZVMPass"
 fi
-echo "PASSWORD: $AZVMPass"
+
