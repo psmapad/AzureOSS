@@ -67,7 +67,7 @@ case $1 in
 	f_news "Load Balancer Rule Created" "Load Balancer Rule Failed"
 	
 	echo "Creating Base Image"
-	AZIPVMB=$(az vm create --resource-group "$AZCSUFF"RGAUTOSC --nsg "$AZCSUFF"NSGAUTOSC --vnet-name "$AZCSUFF"VNETAUTOSC --subnet "$AZCSUFF"VNETINTAUTOSC --name "$AZCSUFF"VAUTOSCBASE --location $AZZONE --size $AZSKUAS --image Debian --admin-username mpena --admin-password "$AZVMPass" |grep publicIpAddress |awk -F\" '{print $4}')
+	AZIPVMB=$(az vm create --resource-group "$AZCSUFF"RGAUTOSC --nsg "$AZCSUFF"NSGAUTOSC --vnet-name "$AZCSUFF"VNETAUTOSC --subnet "$AZCSUFF"VNETINTAUTOSC --name "$AZCSUFF"VAUTOSCBASE --location $AZZONE --size $AZSKUAS --image Debian --admin-username $AZVMUser --admin-password "$AZVMPass" |grep publicIpAddress |awk -F\" '{print $4}')
 	f_news "Base Image Created" "Base Image failed"
 	echo "Access to $AZIPVMB IP with SSH with $AZVMUser through SSH with $AZVMPass"
 	echo "Testing Services:"
