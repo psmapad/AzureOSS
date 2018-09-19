@@ -1,0 +1,72 @@
+---
+- hosts: localhost
+  connection: lo cal
+  tasks:
+    - name: Create resource group
+      azure_rm_resourcegroup:
+        name: BSRGBCENTTEST
+        location: westus2
+      register: rg
+    - debug:
+        var: rg
+
+    - name: Create storage account
+      azure_rm_storageaccount:
+        resource_group: BSRGBCENTTEST
+        name: bssabcenttest
+        account_type: Standard_LRS
+
+    - name: Create virtual network
+      azure_rm_virtualnetwork:
+        resource_group: BSRGBCENTTEST
+        name: BSVNETBCENTTEST
+        address_prefixes: "192.168.10.0/24"
+
+    - name: Add subnet
+      azure_rm_subnet:
+        resource_group: BSRGBCENTTEST
+        name: BSVSNETBCENTTEST
+        address_prefix: "192.168.10.0/24"
+        virtual_network: BSVNETBCENTTEST
+
+    - name: Create public ip
+      azure_rm_publicipaddress:
+        resource_group: BSRGBCENTTEST
+        allocation_method: Dynamic
+        name: bspipbcenttest
+
+    - name: Create security group that allows SSH
+      azure_rm_securitygroup:
+        resource_group: BSRGBCENTTEST
+        name: BSNSGBCENTTEST
+        rules:
+        - name: BSRGBCENTTESTSSH
+          protocol: Tcp
+          destination_port_range: 22
+          access: Allow
+          priority: 1000
+          direction: Inbound
+
+    - name: Create NIC
+      azure_rm_networkinterface:
+        resource_group: BSRGBCENTTEST
+        name: BSNICBCENTTEST
+        virtual_network: BSVNETBCENTTEST
+        subnet: BSVSNETBCENTTEST
+        public_ip_name: bspipbcenttest
+        security_group: BSNSGBCENTTEST
+
+    - name: Create virtual machine
+      azure_rm_virtualmachine:
+        resource_group: BSRGBCENTTEST
+        name: BSVMBCENTTEST
+        vm_size: Standard_A1_v2
+        admin_username: bcentadmin
+        admin_password: ..C0ntr4.3n4..
+        network_interfaces: BSNICBCENTTEST
+        managed_disk_type: Standard_LRS
+        image:
+          offer: CentOS
+          publisher: OpenLogic
+          sku: '7.5'
+          version: latest
