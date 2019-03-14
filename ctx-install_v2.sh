@@ -226,7 +226,7 @@ cp /etc/idmapd.conf /etc/idmapd.conf.old
 
 cat << EOF >> /etc/idmapd.conf
 [General]
-Domain = pemex.pmx.com
+Domain = $(echo $REALM |awk '{print tolower($0)}')
 [Mapping]
 Nobody-User = nobody
 Nobody-Group = nobody
