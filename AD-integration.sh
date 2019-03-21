@@ -1,16 +1,18 @@
 #!/bin/bash
 ## File to deploy Domain Controler Integration on Centos
-## Centos 7.3
+## Centos 7.4
 ## Tested on Azure 
 ## Developer: Manuel Alejandro Peña Sánchez
 ## AD Integration with sssd
 
+
 DOMAINREALM=$2
 ADUSER=$3
 NTPS=$4
-DNS1="IPDNS1"
-DNS2="IPDNS2"
-SEARCH="PREFINXDOMAINSEARCH"
+DNS1=$5
+DNS2=$6
+SEARCH=$7
+ADPASS=$8
 
 f_news(){
     RET=$?
@@ -66,14 +68,27 @@ case $1 in
 	fi
 	
 	echo "Domain Join"
-	kinit $ADUSER@$DOMAINREALM 
+	echo -n $ADPASS|kinit $ADUSER@$DOMAINREALM 
 	f_news "Kerberos service configured correctly" "Had a problem configuring Kerberos"
 	
-	realm join --verbose $DOMAINREALM -U $ADUSER@$DOMAINREALM
+	echo -n $ADPASS |realm join --verbose $DOMAINREALM -U $ADUSER@$DOMAINREALM
 	f_news "Server joined domain configured correctly" "Had a problem joining Domain"
+
+	cp /etc/idmapd.conf /etc/idmapd.conf.old
+	> /etc/idmapd.conf
 	
-	echo -n "Change SSSD Configuration?(s/n): "
-	read SSDCNF
+	cat << EOF >> /etc/idmapd.conf
+[General]
+Domain = $(echo $DOMAINREALM |awk '{ print tolower($0) }')
+[Mapping]
+Nobody-User = nobody
+Nobody-Group = nobody
+[Translation]
+Method = nsswitch
+
+EOF
+	
+	SSDCNF="s"
 	if [ "$SSDCNF" == "s" ]
 	then
 	    sed -i 's/^default_shell.*/default_shell=\/bin\/bash/g' /etc/sssd/sssd.conf
@@ -104,15 +119,12 @@ case $1 in
 	su - $ADUSER -c pwd > /dev/null
 	f_news "Domain Controler User Testing 04 - OK" "Domain Controler User Testing 04 - Had a problem"
 	
-	echo "SSH Test (please provide your AD users password)"
-	ssh $ADUSER@localhost who 
-	f_news "Domain Controler User Testing 05 - OK" "Domain Controler User Testing 05 - Had a problem"
 	;;
     leave)
 	realm leave -v -U $3 $2
 	;;
     *)
-	echo "Usage: $0 {join REALM ADMINADUSER NTPSERVER | leave REALM ADMINADUSER}"
+	echo "Usage: $0 {join REALM ADMINADUSER NTPSERVER DNS1 DNS2 SEARCHDOMAIN PASSWORD | leave REALM ADMINADUSER PASSWORD}"
 	exit 2
 	;;
 esac
