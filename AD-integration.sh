@@ -91,13 +91,14 @@ EOF
 	SSDCNF="s"
 	if [ "$SSDCNF" == "s" ]
 	then
+	    mkdir -p /Domain/home
 	    sed -i 's/^default_shell.*/default_shell=\/bin\/bash/g' /etc/sssd/sssd.conf
 	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD"
 	    sed -i 's/^use_fully_qualified_names.*/use_fully_qualified_names=False/g' /etc/sssd/sssd.conf
 	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD"
-	    sed -i 's/^fallback_homedir.*/fallback_homedir=\/home\/\%u/g' /etc/sssd/sssd.conf
+	    sed -i 's/^fallback_homedir.*/fallback_homedir=\/Domain\/home\/\%u/g' /etc/sssd/sssd.conf
 	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD"
-	    sed -i 's/^override_homedir.*/override_homedir=\/home\/\%u/g' /etc/sssd/sssd.conf
+	    sed -i 's/^override_homedir.*/override_homedir=\/Domain\/home\/\%u/g' /etc/sssd/sssd.conf
 	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD"
 	else
 	    echo "Not Overriding SSSD conf"
