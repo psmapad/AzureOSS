@@ -31,48 +31,48 @@ f_news(){
 
 case $1 in
     join)
-	echo "Install SSSD REALM NTPDATE"
-	yum -y update  > /dev/null
-	f_news "System Updated Correctly" "Had a problem updating System"
-	yum -y install realmd sssd krb5-workstation krb5-libs oddjob oddjob-mkhomedir samba-common-tools ntp krb5-user samba smbfs samba-client sssd-winbind-idmap ntpdate nano > /dev/null
-	f_news "Services Installed Correctly" "Had a problem installing Services"
+	echo "Install SSSD REALM NTPDATE" 3>&1 1> ~/ADEnroll.log
+	yum -y update  3>&1 1>> ~/ADEnroll.log
+	f_news "System Updated Correctly" "Had a problem updating System" 3>&1 1>> ~/ADEnroll.log
+	yum -y install realmd sssd krb5-workstation krb5-libs oddjob oddjob-mkhomedir samba-common-tools ntp krb5-user samba smbfs samba-client sssd-winbind-idmap ntpdate nano 3>&1 1>> ~/ADEnroll.log
+	f_news "Services Installed Correctly" "Had a problem installing Services" 3>&1 1>> ~/ADEnroll.log
 	
-	echo "Configure ntpserver"
+	echo "Configure ntpserver" 3>&1 1>> ~/ADEnroll.log
 	sed -i 's/^server/#server/g' /etc/ntp.conf
-	f_news "Services Installed Correctly" "Had a problem installing Services"
+	f_news "Services Installed Correctly" "Had a problem installing Services" 3>&1 1>> ~/ADEnroll.log
 	echo server $NTPS >> /etc/ntp.conf
-	systemctl restart ntpd > /dev/null
-	f_news "NTP Service configured correctly" "Had a problem configuring NTP"
+	systemctl restart ntpd 3>&1 1>> ~/ADEnroll.log
+	f_news "NTP Service configured correctly" "Had a problem configuring NTP" 3>&1 1>> ~/ADEnroll.log
 	
-	echo "Change Secure Settings"
-	echo "SELINUX to Permissive"
+	echo "Change Secure Settings" 3>&1 1>> ~/ADEnroll.log
+	echo "SELINUX to Permissive" 3>&1 1>> ~/ADEnroll.log
 	sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/sysconfig/selinux
-	setenforce 0 > /dev/null
-	f_news "NTP Service configured correctly" "Had a problem configuring NTP"
+	setenforce 0  3>&1 1>> ~/ADEnroll.log
+	f_news "NTP Service configured correctly" "Had a problem configuring NTP" 3>&1 1>> ~/ADEnroll.log
 	
 	echo "Setting UP Networking INFO for Active Directory Join"
 	sed -i 's/PEERDNS=yes/PEERDNS=no/g' /etc/sysconfig/network-scripts/ifcfg-eth0
 	echo DNS1=$DNS1 >> /etc/sysconfig/network-scripts/ifcfg-eth0
 	echo DNS2=$DNS2 >> /etc/sysconfig/network-scripts/ifcfg-eth0
 	echo SEARCH=$SEARCH >> /etc/sysconfig/network-scripts/ifcfg-eth0
-	systemctl restart network > /dev/null
-	f_news "Network Services configured correctly" "Had a problem configuring Network Services"
+	systemctl restart network  3>&1 1>> ~/ADEnroll.log
+	f_news "Network Services configured correctly" "Had a problem configuring Network Services" 3>&1 1>> ~/ADEnroll.log
 	
 	echo "DOMAIN TESTING"
 	if ping -c3 $DOMAINREALM
 	then
-	    realm discover $DOMAINREALM > /dev/null
-	    f_news "Domain Controler discovered correctly" "Had a problem discovering Domain Controler"
+	    realm discover $DOMAINREALM 3>&1 1>> ~/ADEnroll.log
+	    f_news "Domain Controler discovered correctly" "Had a problem discovering Domain Controler" 3>&1 1>> ~/ADEnroll.log
 	else
-	    echo "Domain not reacheable"
+	    echo "Domain not reacheable" 3>&1 1>> ~/ADEnroll.log
 	fi
 	
-	echo "Domain Join"
-	echo -n $ADPASS|kinit $ADUSER@$DOMAINREALM 
-	f_news "Kerberos service configured correctly" "Had a problem configuring Kerberos"
+	echo "Domain Join" 3>&1 1>> ~/ADEnroll.log
+	echo -n $ADPASS|kinit $ADUSER@$DOMAINREALM  3>&1 1>> ~/ADEnroll.log
+	f_news "Kerberos service configured correctly" "Had a problem configuring Kerberos" 3>&1 1>> ~/ADEnroll.log
 	
-	echo -n $ADPASS |realm join --verbose $DOMAINREALM -U $ADUSER@$DOMAINREALM
-	f_news "Server joined domain configured correctly" "Had a problem joining Domain"
+	echo -n $ADPASS |realm join --verbose $DOMAINREALM -U $ADUSER@$DOMAINREALM 3>&1 1>> ~/ADEnroll.log
+	f_news "Server joined domain configured correctly" "Had a problem joining Domain" 3>&1 1>> ~/ADEnroll.log
 
 	cp /etc/idmapd.conf /etc/idmapd.conf.old
 	> /etc/idmapd.conf
@@ -93,36 +93,36 @@ EOF
 	then
 	    mkdir -p /Domain/home
 	    sed -i 's/^default_shell.*/default_shell=\/bin\/bash/g' /etc/sssd/sssd.conf
-	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD"
+	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD" 3>&1 1>> ~/ADEnroll.log
 	    sed -i 's/^use_fully_qualified_names.*/use_fully_qualified_names=False/g' /etc/sssd/sssd.conf
-	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD"
+	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD" 3>&1 1>> ~/ADEnroll.log
 	    sed -i 's/^fallback_homedir.*/fallback_homedir=\/Domain\/home\/\%u/g' /etc/sssd/sssd.conf
-	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD"
+	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD" 3>&1 1>> ~/ADEnroll.log
 	    sed -i 's/^override_homedir.*/override_homedir=\/Domain\/home\/\%u/g' /etc/sssd/sssd.conf
-	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD"
+	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD" 3>&1 1>> ~/ADEnroll.log
 	else
-	    echo "Not Overriding SSSD conf"
+	    echo "Not Overriding SSSD conf" 3>&1 1>> ~/ADEnroll.log
 	fi
-	systemctl restart sssd realmd > /dev/null
-	f_news "SSSD Service restarted correctly" "Had a problem restarting SSSD"
+	systemctl restart sssd realmd  3>&1 1>> ~/ADEnroll.log
+	f_news "SSSD Service restarted correctly" "Had a problem restarting SSSD" 3>&1 1>> ~/ADEnroll.log
 	
-	echo "Domain Integration Testing"
-	echo " ID Testing"
-	id $ADUSER@$DOMAINREALM > /dev/null
-	f_news "Domain Controler User Testing 01 - OK" "Domain Controler User Testing 01 - Had a problem"
-	id $ADUSER > /dev/null
-	f_news "Domain Controler User Testing 02 - OK" "Domain Controler User Testing 02 - Had a problem"
+	echo "Domain Integration Testing" 3>&1 1>> ~/ADEnroll.log
+	echo " ID Testing" 3>&1 1>> ~/ADEnroll.log
+	id $ADUSER@$DOMAINREALM  3>&1 1>> ~/ADEnroll.log
+	f_news "Domain Controler User Testing 01 - OK" "Domain Controler User Testing 01 - Had a problem" 3>&1 1>> ~/ADEnroll.log
+	id $ADUSER  3>&1 1>> ~/ADEnroll.log
+	f_news "Domain Controler User Testing 02 - OK" "Domain Controler User Testing 02 - Had a problem" 3>&1 1>> ~/ADEnroll.log
 	
-	echo " SU - Testing"
-	su - $ADUSER@$DOMAINREALM -c pwd > /dev/null
-	f_news "Domain Controler User Testing 03 - OK" "Domain Controler User Testing 03 - Had a problem"
+	echo " SU - Testing" 3>&1 1>> ~/ADEnroll.log
+	su - $ADUSER@$DOMAINREALM -c pwd 3>&1 1>> ~/ADEnroll.log
+	f_news "Domain Controler User Testing 03 - OK" "Domain Controler User Testing 03 - Had a problem" 3>&1 1>> ~/ADEnroll.log
 	
-	su - $ADUSER -c pwd > /dev/null
-	f_news "Domain Controler User Testing 04 - OK" "Domain Controler User Testing 04 - Had a problem"
+	su - $ADUSER -c pwd 3>&1 1>> ~/ADEnroll.log
+	f_news "Domain Controler User Testing 04 - OK" "Domain Controler User Testing 04 - Had a problem" 3>&1 1>> ~/ADEnroll.log
 	
 	;;
     leave)
-	realm leave -v -U $3 $2
+	realm leave -v -U $3 $2 3>&1 1>> ~/ADEnroll.log
 	;;
     *)
 	echo "Usage: $0 {join REALM ADMINADUSER NTPSERVER DNS1 DNS2 SEARCHDOMAIN PASSWORD | leave REALM ADMINADUSER PASSWORD}"
