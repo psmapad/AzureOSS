@@ -100,6 +100,18 @@ EOF
 	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD" 3>&1 1>> ~/ADEnroll.log
 	    sed -i 's/^override_homedir.*/override_homedir=\/Domain\/home\/\%u/g' /etc/sssd/sssd.conf
 	    f_news "SSSD Service configured correctly" "Had a problem configuring SSSD" 3>&1 1>> ~/ADEnroll.log
+	    access_provider = ad
+	    cat << EOF >> /etc/sssd/sssd.conf
+auth_provider = ad
+chpass_provider = ad
+access_provider = ad
+ldap_schema = ad
+dyndns_update = true
+dyndns_refresh_interval = 43200
+dyndns_update_ptr = true
+dyndns_ttl = 3600
+
+EOF
 	else
 	    echo "Not Overriding SSSD conf" 3>&1 1>> ~/ADEnroll.log
 	fi
