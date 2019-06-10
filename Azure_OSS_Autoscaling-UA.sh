@@ -67,13 +67,26 @@ case $1 in
         az network lb rule create --resource-group "$AZCSUFF"RGAUTOSC  --lb-name "$AZCSUFF"LBAUTOSC --name "$AZCSUFF"LBRWEBAUTOSC --protocol tcp --frontend-port 80 --backend-port 80 --frontend-ip-name "$AZCSUFF"FIPAUTOSC --backend-pool-name "$AZCSUFF"BIPAUTOSC --probe-name "$AZCSUFF"LBHPAUTOSC >> /dev/null
         f_news "Load Balancer Rule Created" "Load Balancer Rule Failed"
 
+        echo "Creating Storage Account"
+        az storage account create --resource-group "$AZCSUFF"RGAUTOSC --name $(echo $AZCSUFF |awk '{ print tolower($0) }')saautosc  --sku Standard_LRS
+        f_news "Storage Account Created" "Storage Account failed"
+        current_env_conn_string=$(az storage account show-connection-string -n $(echo $AZCSUFF |awk '{ print tolower($0) }')saautosc -g "$AZCSUFF"RGAUTOSC --query 'connectionString' -o tsv)
+
+        echo "Creating Azure File"
+        az storage share create --name $(echo $AZCSUFF |awk '{ print tolower($0) }')afautosc --quota 32 --connection-string $current_env_conn_string
+        f_news "Azure File Created" "Azure File failed"
+        AZSAUSER=$(echo $(echo $AZCSUFF |awk '{ print tolower($0) }')saautosc)
+        AZSAKEY=$(az storage account keys list --resource-group "$AZCSUFF"RGAUTOSC --account-name $AZSAUSER --query "[0].value" | tr -d '"')
+        f_news "Storage Account Key Stored" "Storage Account Key failed"
+
         echo "Creating Base Image"
-        AZIPVMB=$(az vm create --resource-group "$AZCSUFF"RGAUTOSC --nsg "$AZCSUFF"NSGAUTOSC --vnet-name "$AZCSUFF"VNETAUTOSC --subnet "$AZCSUFF"VNETINTAUTOSC --name "$AZCSUFF"VAUTOSCBASE --location $AZZONE --size $AZSKUAS --image Debian --admin-username $AZVMUser --admin-password "$AZVMPass" |grep publicIpAddress |awk -F\" '{print $4}')
+        AZIPVMB=$(az vm create --resource-group "$AZCSUFF"RGAUTOSC --nsg "$AZCSUFF"NSGAUTOSC --vnet-name "$AZCSUFF"VNETAUTOSC --subnet "$AZCSUFF"VNETINTAUTOSC --name "$AZCSUFF"VAUTOSCBASE --location $AZZONE --size $AZSKUAS --image OpenLogic:CentOS:7.6:7.6.20190402 --admin-username $AZVMUser --admin-password "$AZVMPass" |grep publicIpAddress |awk -F\" '{print $4}')
         f_news "Base Image Created" "Base Image failed"
         echo "Access to $AZIPVMB IP with SSH with $AZVMUser through SSH with $AZVMPass"
         echo "Testing Services:"
         echo "- Please test your ssh login"
         sshpass -p $AZVMPass ssh -o ConnectTimeout=5 $AZVMUser@$AZIPVMB "id"
+
         if [ "$?" -eq 0 ]
         then
             CONTINUE="y"
@@ -82,20 +95,33 @@ case $1 in
             exit 2
         fi
         echo "- Configuring Webserver on $AZIPVMB"
-        sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S apt-get -y install apache2 php5"
+        sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S yum install -y apache2 php cifs-utils"
         if [ "$?" -eq 0 ]
         then
             sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S mkdir -p /var/www/html"
+            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'mkdir /etc/smbcredentials'"
+            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'echo username=$(echo $AZSAUSER) >> /etc/smbcredentials/$(echo $AZSAUSER).cred'"
+            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'echo password=$(echo $AZSAKEY) >> /etc/smbcredentials/$(echo $AZSAUSER).cred'"
+            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'chmod 600 /etc/smbcredentials/$(echo $AZSAUSER).cred'"
+            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'echo \"//$(echo $AZSAUSER).file.core.windows.net/$(echo $AZCSUFF |awk '{ print tolower($0) }')afautosc /var/www/html cifs nofail,vers=3.0,credentials=/etc/smbcredentials/$(echo $AZSAUSER).cred,dir_mode=0777,file_mode=0777,serverino\" >> /etc/fstab'"
+            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S mount /var/www/html"
             sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S touch /var/www/html/index.php"
             sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "ls -lF /var/www/html/"
             sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '<?php echo gethostbyname(trim(\`hostname\`)); ?>' > ~/tmp.txt"
             sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '<h3> Version 1 </h3>' >> ~/tmp.txt"
             sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S mv /home/$AZVMUser/tmp.txt /var/www/html/index.php"
-            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S rm -f /var/www/html/index.h*"
+            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S rm -f /var/www/html/index.h* /etc/httpd/conf.d/welcome.conf"
+
+            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'sed -i \'s/SELINUX=enforcing/SELINUX=permissive/g\' /etc/sysconfig/selinux'"
+            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'sed -i \'s/SELINUX=enforcing/SELINUX=permissive/g\' /etc/selinux/config'"
+            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'setenforce 0 '"
+            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'systemctl start httpd'"
+
             sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'echo y |waagent -deprovision'"
         else
             exit 2
         fi
+
         echo "Done configuring Webserver Main Page"
         if [ $CONTINUE == "y" ]
         then
@@ -128,12 +154,16 @@ case $1 in
         echo "Or $(echo $AZDNSN)jb.$AZZONE.cloudapp.azure.com"
         echo "WebPage is on http://$AZDNSN.$AZZONE.cloudapp.azure.com/"
         ;;
+
     remove)
         az group delete -y --name "$2"RGAUTOSC >> /dev/null
         f_news "Resource Group deleted" "Resource Group delete Failed"
         ;;
+
     *)
         echo "Usage: $0 {deploy AZUREZONE COMPANYSUFFIX VMUSER VMPASS DNSNAME | remove COMPANYSUFFIX}"
         exit 2
         ;;
 esac
+
+
