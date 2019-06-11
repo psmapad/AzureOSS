@@ -111,10 +111,8 @@ case $1 in
             sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '<h3> Version 1 </h3>' >> ~/tmp.txt"
             sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S mv /home/$AZVMUser/tmp.txt /var/www/html/index.php"
             sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S rm -f /var/www/html/index.h* /etc/httpd/conf.d/welcome.conf"
-
-            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'sed -i \'s/SELINUX=enforcing/SELINUX=permissive/g\' /etc/sysconfig/selinux'"
-            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'sed -i \'s/SELINUX=enforcing/SELINUX=permissive/g\' /etc/selinux/config'"
-            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'setenforce 0 '"
+            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'setenforce 0'"
+            sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'systemctl enable httpd'"
             sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'systemctl start httpd'"
 
             sshpass -p $AZVMPass ssh -o ConnectTimeout=3 $AZVMUser@$AZIPVMB "echo '$AZVMPass' |sudo -S sh -c 'echo y |waagent -deprovision'"
@@ -137,14 +135,15 @@ case $1 in
             az image create --resource-group "$AZCSUFF"RGAUTOSC --name "$AZCSUFF"VAUTOSCIMG --source "$AZCSUFF"VAUTOSCBASE >> /dev/null
             f_news "Base Image Created" "Base Image Failed"
             echo "Creating VM Scale Service"
-            az vmss create --lb "$AZCSUFF"LBAUTOSC --location $AZZONE --public-ip-address "$AZCSUFF"PIPAUTOSC --nsg "$AZCSUFF"NSGAUTOSC --vnet-name "$AZCSUFF"VNETAUTOSC --subnet "$AZCSUFF"VNETINTAUTOSC --resource-group "$AZCSUFF"RGAUTOSC --name "$AZCSUFF"SSAUTOSC --image "$AZCSUFF"VAUTOSCIMG --vm-sku $AZSKUAS --admin-username $AZVMUser --admin-password "$AZVMPass" >> /dev/null
+            az vmss create --upgrade-policy-mode Automatic --lb "$AZCSUFF"LBAUTOSC --location $AZZONE --public-ip-address "$AZCSUFF"PIPAUTOSC --nsg "$AZCSUFF"NSGAUTOSC --vnet-name "$AZCSUFF"VNETAUTOSC --subnet "$AZCSUFF"VNETINTAUTOSC --resource-group "$AZCSUFF"RGAUTOSC --name "$AZCSUFF"SSAUTOSC --image "$AZCSUFF"VAUTOSCIMG --vm-sku $AZSKUAS --admin-username $AZVMUser --admin-password "$AZVMPass" >> /dev/null
+            echo "az vmss extension set --extension-instance-name AUTOSC --publisher Microsoft.Azure.Extensions --version 2.0 --name CustomScript --resource-group "$AZCSUFF"RGAUTOSC --vmss-name "$AZCSUFF"SSAUTOSC --settings '{ \"commandToExecute\": \"setenforce 0\" }'" | bash
             f_news "VM Scale Service Created" "VM Scale Service Failed"
         else
             echo "Nothing To Do, Please finish to custom your VM image and run the following Azure CLI 2.0 commands:"
             echo "az vm deallocate --resource-group $(echo $AZCSUFF)RGAUTOSC --name $(echo $AZCSUFF)VAUTOSCBASE"
             echo "az vm generalize --resource-group $(echo $AZCSUFF)RGAUTOSC --name $(echo $AZCSUFF)VAUTOSCBASE"
             echo "az image create --resource-group $(echo $AZCSUFF)RGAUTOSC --name $(echo $AZCSUFF)VAUTOSCIMG --source $(echo $AZCSUFF)VAUTOSCBASE"
-            echo "az vmss create --lb $(echo $AZCSUFF)LBAUTOSC --location $AZZONE --public-ip-address $(echo $AZCSUFF)PIPAUTOSC --nsg $(echo $AZCSUFF)NSGAUTOSC --vnet-name $(echo $AZCSUFF)VNETAUTOSC --subnet $(echo $AZCSUFF)VNETINTAUTOSC --resource-group $(echo $AZCSUFF)RGAUTOSC --name $(echo $AZCSUFF)SSAUTOSC --image $(echo $AZCSUFF)VAUTOSCIMG --vm-sku $AZSKUAS --admin-username $AZVMUser --admin-password '$AZVMPass'"
+            echo "az vmss create --upgrade-policy-mode Automatic --lb $(echo $AZCSUFF)LBAUTOSC --location $AZZONE --public-ip-address $(echo $AZCSUFF)PIPAUTOSC --nsg $(echo $AZCSUFF)NSGAUTOSC --vnet-name $(echo $AZCSUFF)VNETAUTOSC --subnet $(echo $AZCSUFF)VNETINTAUTOSC --resource-group $(echo $AZCSUFF)RGAUTOSC --name $(echo $AZCSUFF)SSAUTOSC --image $(echo $AZCSUFF)VAUTOSCIMG --vm-sku $AZSKUAS --admin-username $AZVMUser --admin-password '$AZVMPass'"
         fi
 
         echo "Creating Jump Box"
